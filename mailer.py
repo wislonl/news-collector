@@ -73,3 +73,4 @@ def send_email(processed_news):
         print("Email sent successfully!")
     except Exception as e:
         print(f"Failed to send email: {e}")
+        raise e # 抛出异常，让 GitHub Actions 显示失败，方便排查
