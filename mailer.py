@@ -22,27 +22,46 @@ def send_email(processed_news):
     <html>
     <head>
         <style>
-            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; }}
-            .container {{ max-width: 800px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
-            h1 {{ color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }}
-            .news-item {{ margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eee; }}
-            .news-title {{ font-size: 18px; font-weight: bold; color: #2980b9; text-decoration: none; }}
-            .news-source {{ font-size: 12px; color: #7f8c8d; margin-bottom: 5px; }}
-            .news-summary {{ font-size: 14px; line-height: 1.6; color: #34495e; }}
-            .footer {{ font-size: 12px; color: #bdc3c7; text-align: center; margin-top: 30px; }}
+            body {{ font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 40px 20px; }}
+            .container {{ max-width: 700px; margin: 0 auto; background: #ffffff; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }}
+            .header {{ text-align: center; margin-bottom: 40px; border-bottom: 2px solid #f1f5f9; padding-bottom: 30px; }}
+            h1 {{ color: #0f172a; font-size: 28px; margin: 0 0 10px 0; letter-spacing: -0.5px; }}
+            .subtitle {{ color: #64748b; font-size: 16px; }}
+            .news-item {{ margin-bottom: 30px; padding: 24px; border-radius: 12px; background: #ffffff; border: 1px solid #e2e8f0; transition: all 0.2s ease; }}
+            .news-item:hover {{ border-color: #3b82f6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1); }}
+            .news-meta {{ font-size: 12px; font-weight: 600; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }}
+            .news-title {{ font-size: 20px; font-weight: 700; color: #1e293b; text-decoration: none; display: block; margin-bottom: 12px; line-height: 1.4; }}
+            .news-summary {{ font-size: 15px; line-height: 1.6; color: #475569; margin: 0; }}
+            .footer {{ font-size: 13px; color: #94a3b8; text-align: center; margin-top: 40px; padding-top: 24px; border-top: 1px solid #f1f5f9; }}
+            .badge {{ display: inline-block; padding: 2px 8px; background: #eff6ff; color: #3b82f6; border-radius: 6px; font-size: 11px; }}
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>每日全球科技新闻速报 ({today})</h1>
-            <p>为您精选 20 条国内外热门科技动态：</p>
+            <div class="header">
+                <h1>🚀 科技速递 | Tech Digest</h1>
+                <div class="subtitle">📅 {today} · 智选全球科技精要</div>
+            </div>
     """
     
-    for item in processed_news:
+    for i, item in enumerate(processed_news):
+        # 简单根据内容选择图标
+        icon = "📰"
+        title_upper = item['title'].upper()
+        if any(kw in title_upper for kw in ["AI", "人工智能", "LLM", "MODEL", "GPT"]): icon = "🤖"
+        elif any(kw in title_upper for kw in ["APPLE", "苹果", "IPHONE", "MAC"]): icon = "🍎"
+        elif any(kw in title_upper for kw in ["TESLA", "特斯拉", "EV", "AUTO", "车"]): icon = "🚗"
+        elif any(kw in title_upper for kw in ["CHIP", "芯片", "NVIDIA", "GPU", "英伟达"]): icon = "🔌"
+        elif any(kw in title_upper for kw in ["SPACE", "SPACE X", "航天", "火箭"]): icon = "🌌"
+        elif any(kw in title_upper for kw in ["CRYPTO", "BITCOIN", "WEB3", "BLOCKCHAIN"]): icon = "⛓️"
+        
         html_content += f"""
         <div class="news-item">
-            <div class="news-source">{item['source']}</div>
-            <a class="news-title" href="{item['link']}">{item['title']}</a>
+            <div class="news-meta">
+                <span class="badge">#{i+1}</span>
+                <span>🌐 {item['source']}</span>
+            </div>
+            <a class="news-title" href="{item['link']}">{icon} {item['title']}</a>
             <p class="news-summary">{item['ai_summary']}</p>
         </div>
         """

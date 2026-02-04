@@ -103,7 +103,7 @@ def process_news(news_list):
                 # 尝试获取反馈信息
                 feedback = getattr(response, 'prompt_feedback', 'No feedback available')
                 print(f"Blocked or Empty response for {item['title']}. Feedback: {feedback}")
-                item['ai_summary'] = f"AI 摘要被安全策略拦截或无法生成。原文内容：{item['summary'][:150]}..."
+                item['ai_summary'] = "摘要生成失败，可能是内容触发了安全策略或 API 额度超限。请点击链接查看原文。"
                 
         except Exception as e:
             print(f"Gemini API Error for {item['title']}: {e}")
