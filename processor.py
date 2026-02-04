@@ -208,7 +208,8 @@ def process_github_repos(github_data):
                             })
                     time.sleep(2)
             
-            time.sleep(2) # 避免频率限制
+            # 增加停顿时间，避免触发频率限制
+            time.sleep(6)
         return results
 
     processed_data["top"] = process_batch(github_data["top"][:50], "Top")

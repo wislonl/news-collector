@@ -31,20 +31,22 @@ def send_email(processed_news, processed_repos=None):
             .news-item {{ margin-bottom: 20px; padding: 20px; border-radius: 12px; background: #ffffff; border: 1px solid #e2e8f0; }}
             .news-meta {{ font-size: 12px; font-weight: 600; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }}
             .news-title {{ font-size: 18px; font-weight: 700; color: #1e293b; text-decoration: none; display: block; margin-bottom: 8px; }}
+            .news-title:hover {{ color: #3b82f6; }}
             .news-summary {{ font-size: 14px; line-height: 1.6; color: #475569; margin: 0; }}
             
-            /* GitHub Styles */
-            .repo-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }}
-            .repo-card {{ padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fdfdfe; }}
-            .repo-name {{ font-weight: 700; color: #0969da; text-decoration: none; font-size: 15px; margin-bottom: 6px; display: block; }}
-            .repo-tag {{ display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 4px; background: #f1f5f9; color: #475569; margin-right: 4px; margin-bottom: 4px; }}
-            .repo-desc {{ font-size: 13px; color: #334155; margin: 8px 0; line-height: 1.4; }}
+            /* GitHub Styles - 使用更兼容的布局 */
+            .repo-section {{ margin-bottom: 30px; }}
+            .repo-table {{ width: 100%; border-collapse: separate; border-spacing: 0 12px; }}
+            .repo-card {{ padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fdfdfe; display: block; text-decoration: none; }}
+            .repo-card:hover {{ border-color: #3b82f6; background: #f8fafc; }}
+            .repo-name {{ font-weight: 700; color: #0969da; font-size: 16px; margin-bottom: 8px; display: block; }}
+            .repo-tag {{ display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 6px; background: #f1f5f9; color: #475569; margin-right: 6px; margin-bottom: 6px; }}
+            .repo-desc {{ font-size: 13px; color: #334155; margin: 10px 0; line-height: 1.5; }}
             .repo-stats {{ font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 12px; }}
-            .star-icon {{ color: #eac54f; font-weight: bold; }}
+            .star-icon {{ color: #eac54f; margin-right: 4px; }}
             
             .footer {{ font-size: 13px; color: #94a3b8; text-align: center; margin-top: 40px; padding-top: 24px; border-top: 1px solid #f1f5f9; }}
             .badge {{ display: inline-block; padding: 2px 8px; background: #eff6ff; color: #3b82f6; border-radius: 6px; font-size: 11px; }}
-            @media (max-width: 600px) {{ .repo-grid {{ grid-template-columns: 1fr; }} }}
         </style>
     </head>
     <body>
@@ -70,49 +72,53 @@ def send_email(processed_news, processed_repos=None):
                 <span class="badge">#{i+1}</span>
                 <span>🌐 {item['source']}</span>
             </div>
-            <a class="news-title" href="{item['link']}">{icon} {item['title']}</a>
+            <a class="news-title" href="{item['link']}" target="_blank">{icon} {item['title']}</a>
             <p class="news-summary">{item['ai_summary']}</p>
         </div>
         """
 
     if processed_repos:
-        # Top 50 Agents (展示前 10 个详细卡片，后 40 个列表)
-        html_content += '<div class="section-title">🏆 GitHub Agent 总榜 Top 50 (精选)</div>'
-        html_content += '<div class="repo-grid">'
-        for repo in processed_repos['top'][:10]:
-            html_content += f"""
-            <div class="repo-card">
-                <a class="repo-name" href="{repo['link']}">{repo['full_name']}</a>
-                <div>
-                    <span class="repo-tag" style="background: #dcfce7; color: #166534;">{repo['type']}</span>
-                    <span class="repo-tag">{repo['specs']}</span>
-                </div>
-                <p class="repo-desc">{repo['description']}</p>
-                <div class="repo-stats">
-                    <span><span class="star-icon">★</span> {repo['stars']:,}</span>
-                </div>
-            </div>
-            """
-        html_content += '</div>'
+        # Top 50 Agents
+        if processed_repos.get('top'):
+            html_content += '<div class="section-title">🏆 GitHub Agent 总榜 Top 50 (精选)</div>'
+            html_content += '<div class="repo-section">'
+            for repo in processed_repos['top'][:10]:
+                html_content += f"""
+                <a class="repo-card" href="{repo['link']}" target="_blank">
+                    <span class="repo-name">{repo['full_name']}</span>
+                    <div>
+                        <span class="repo-tag" style="background: #dcfce7; color: #166534;">{repo['type']}</span>
+                        <span class="repo-tag">{repo['specs']}</span>
+                    </div>
+                    <p class="repo-desc">{repo['description']}</p>
+                    <div class="repo-stats">
+                        <span><span class="star-icon">★</span> {repo['stars']:,} Stars</span>
+                    </div>
+                </a>
+                <div style="height: 12px;"></div>
+                """
+            html_content += '</div>'
 
-        # Rising Agents (展示前 10 个详细卡片)
-        html_content += '<div class="section-title">🔥 GitHub 近期爆发 Agent 榜</div>'
-        html_content += '<div class="repo-grid">'
-        for repo in processed_repos['rising'][:10]:
-            html_content += f"""
-            <div class="repo-card">
-                <a class="repo-name" href="{repo['link']}">{repo['full_name']}</a>
-                <div>
-                    <span class="repo-tag" style="background: #fef9c3; color: #854d0e;">{repo['type']}</span>
-                    <span class="repo-tag">{repo['specs']}</span>
-                </div>
-                <p class="repo-desc">{repo['description']}</p>
-                <div class="repo-stats">
-                    <span><span class="star-icon">★</span> {repo['stars']:,}</span>
-                </div>
-            </div>
-            """
-        html_content += '</div>'
+        # Rising Agents
+        if processed_repos.get('rising'):
+            html_content += '<div class="section-title">🔥 GitHub 近期爆发 Agent 榜</div>'
+            html_content += '<div class="repo-section">'
+            for repo in processed_repos['rising'][:10]:
+                html_content += f"""
+                <a class="repo-card" href="{repo['link']}" target="_blank">
+                    <span class="repo-name">{repo['full_name']}</span>
+                    <div>
+                        <span class="repo-tag" style="background: #fef9c3; color: #854d0e;">{repo['type']}</span>
+                        <span class="repo-tag">{repo['specs']}</span>
+                    </div>
+                    <p class="repo-desc">{repo['description']}</p>
+                    <div class="repo-stats">
+                        <span><span class="star-icon">★</span> {repo['stars']:,} Stars</span>
+                    </div>
+                </a>
+                <div style="height: 12px;"></div>
+                """
+            html_content += '</div>'
         
     html_content += """
             <div class="footer">

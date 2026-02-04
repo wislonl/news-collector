@@ -32,11 +32,13 @@ def fetch_news():
 def fetch_github_agents():
     """
     获取 GitHub 上热门的 Agent/Model 项目
-    1. 历史总榜 Top 50 (topic:agent OR topic:ai-agent)
-    2. 快速上升 Top 50 (过去 30 天内创建)
     """
     github_token = os.getenv("GITHUB_TOKEN")
-    headers = {"Accept": "application/vnd.github.v3+json"}
+    # GitHub API 必须包含 User-Agent
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "Tech-Digest-Collector-Bot"
+    }
     if github_token:
         headers["Authorization"] = f"token {github_token}"
     
