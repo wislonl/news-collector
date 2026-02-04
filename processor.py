@@ -15,24 +15,24 @@ def process_news(all_news):
     """
     processed_list = []
     
-    # 合并任务以减少 API 调用次数（或者逐条处理以保证稳定性）
-    # 这里采用逐条处理，方便错误控制
-    
     for lang, news_items in all_news.items():
         for item in news_items:
-            # ... 保持 prompt 逻辑不变 ...
+            # --- 关键修复：显式定义 prompt ---
+            if lang == "zh":
+                prompt = f"请为以下科技新闻生成一个100字以内的中文精简摘要。只需要返回摘要文本，不要有其他描述：\n标题：{item['title']}\n内容：{item['summary']}"
+            else:
+                prompt = f"请将以下英文科技新闻翻译成中文，并生成一个100字以内的中文精简摘要。只需要返回翻译后的摘要文本，不要有其他描述：\n标题：{item['title']}\n内容：{item['summary']}"
+            
             try:
-                # 显式使用 generate_content 之前先打印一下
                 print(f"Summarizing: {item['title'][:30]}...")
                 response = model.generate_content(prompt)
-                # 检查 response 是否有有效文本
                 if response and response.text:
                     item['ai_summary'] = response.text.strip()
                 else:
                     item['ai_summary'] = "AI 未返回有效内容。"
             except Exception as e:
                 print(f"Gemini API Error for {item['title']}: {e}")
-                item['ai_summary'] = f"AI 摘要失败: {str(e)}"
+                item['ai_summary'] = "摘要生成失败，请点击链接查看原文。"
             
             processed_list.append(item)
             
