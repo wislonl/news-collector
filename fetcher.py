@@ -18,7 +18,8 @@ def fetch_news():
                         "title": entry.title,
                         "link": entry.link,
                         "summary": entry.get("summary", ""),
-                        "source": feed.feed.get("title", url)
+                        "source": feed.feed.get("title", url),
+                        "lang": lang
                     })
             except Exception as e:
                 print(f"Error fetching {url}: {e}")

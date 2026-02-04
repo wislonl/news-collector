@@ -17,7 +17,7 @@ NEWS_SOURCES = {
 }
 
 # 每天每个源抓取的热门新闻条数
-NEWS_PER_SOURCE = 2
+NEWS_PER_SOURCE = 10
 
 # 邮件配置
 SENDER_EMAIL = "jw.lee@163.com"
