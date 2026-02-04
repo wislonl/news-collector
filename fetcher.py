@@ -55,14 +55,20 @@ def fetch_github_agents():
             print(f"Error searching GitHub: {e}")
             return []
 
-    # 1. 历史总榜
+    # 1. 历史总榜 (结合 Topic 和关键词搜索，提高覆盖率)
     print("Fetching GitHub Top Agents...")
-    top_agents = search_repos("topic:agent+OR+topic:ai-agent+OR+topic:llm-agent")
+    top_agents = search_repos("(topic:agent OR topic:ai-agent OR topic:llm-agent OR \"AI Agent\" OR \"LLM Agent\") stars:>1000")
     
-    # 2. 快速上升 (30天内创建且 stars 最多)
+    # 2. 快速上升 (30天内创建)
     last_30_days = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
-    print("Fetching Rising GitHub Agents...")
-    rising_agents = search_repos(f"topic:agent+OR+topic:ai-agent+OR+topic:llm-agent+created:>{last_30_days}")
+    print(f"Fetching Rising GitHub Agents since {last_30_days}...")
+    rising_agents = search_repos(f"(topic:agent OR topic:ai-agent OR topic:llm-agent OR \"AI Agent\" OR \"LLM Agent\") created:>{last_30_days}")
+
+    # 如果 rising_agents 太少，尝试放宽条件搜索关键词
+    if len(rising_agents) < 5:
+        print("Too few rising agents found with topics, trying keyword search...")
+        more_rising = search_repos(f"\"AI Agent\" created:>{last_30_days}")
+        rising_agents.extend([r for r in more_rising if r['full_name'] not in [x['full_name'] for x in rising_agents]])
 
     return {
         "top": top_agents,

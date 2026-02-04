@@ -78,6 +78,9 @@ def send_email(processed_news, processed_repos=None):
         """
 
     if processed_repos:
+        top_count = len(processed_repos.get('top', []))
+        rising_count = len(processed_repos.get('rising', []))
+        print(f"Adding GitHub section: {top_count} top repos, {rising_count} rising repos.")
         # Top 50 Agents
         if processed_repos.get('top'):
             html_content += '<div class="section-title">🏆 GitHub Agent 总榜 Top 50 (精选)</div>'
@@ -147,22 +150,3 @@ def send_email(processed_news, processed_repos=None):
     except Exception as e:
         print(f"Failed to send email: {e}")
         raise e
-
-    # 创建邮件对象
-    msg = MIMEMultipart()
-    msg['From'] = SENDER_EMAIL
-    msg['To'] = RECEIVER_EMAIL
-    msg['Subject'] = f"【科技早报】{today} 全球热门新闻整理"
-    
-    msg.attach(MIMEText(html_content, 'html'))
-    
-    try:
-        # 使用 SSL 连接
-        server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
-        server.login(SENDER_EMAIL, password)
-        server.send_message(msg)
-        server.quit()
-        print("Email sent successfully!")
-    except Exception as e:
-        print(f"Failed to send email: {e}")
-        raise e # 抛出异常，让 GitHub Actions 显示失败，方便排查
