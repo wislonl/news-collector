@@ -7,8 +7,8 @@ load_dotenv()
 # 配置 Gemini API
 api_key = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=api_key)
-# 使用最新建议的模型名称
-model = genai.GenerativeModel('gemini-1.5-flash-latest')
+# 使用最新的 Gemini 3.0 Flash 模型
+model = genai.GenerativeModel('gemini-3.0-flash')
 
 def select_top_news(all_news, count=20):
     """
