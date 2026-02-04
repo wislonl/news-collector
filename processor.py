@@ -7,8 +7,8 @@ load_dotenv()
 # 配置 Gemini API
 api_key = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=api_key)
-# 使用最新的 Gemini 3.0 Flash 模型
-model = genai.GenerativeModel('gemini-3.0-flash')
+# 使用更稳定的 Gemini 1.5 Flash 模型
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 def select_top_news(all_news, count=20):
     """
@@ -37,7 +37,14 @@ def select_top_news(all_news, count=20):
     
     try:
         print(f"AI is selecting top {count} news from {len(flat_news)} items...")
-        response = model.generate_content(prompt)
+        # 增加安全设置防止筛选阶段被拦截
+        safety_settings = {
+            "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
+            "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
+            "HARM_CATEGORY_SEXUALLY_EXPLICIT": "BLOCK_NONE",
+            "HARM_CATEGORY_DANGEROUS_CONTENT": "BLOCK_NONE",
+        }
+        response = model.generate_content(prompt, safety_settings=safety_settings)
         
         if not response or not response.text:
             print("AI failed to select news, falling back to original list.")
@@ -70,45 +77,46 @@ def process_news(news_list):
     处理新闻列表：生成摘要（如果是英文则翻译+摘要）
     """
     processed_list = []
+    import time
     
-    # 设置安全设置以减少拦截
-    safety_settings = [
-        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-    ]
+    # 使用字典格式的安全设置
+    safety_settings = {
+        "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
+        "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
+        "HARM_CATEGORY_SEXUALLY_EXPLICIT": "BLOCK_NONE",
+        "HARM_CATEGORY_DANGEROUS_CONTENT": "BLOCK_NONE",
+    }
     
-    for item in news_list:
-        lang = "en" if any(ord(c) < 128 for c in item['title'][:5]) and not any('\u4e00' <= c <= '\u9fff' for c in item['title']) else "zh"
-        # 简单的语言判断，或者在抓取时就标记好
-        # 这里为了兼容性，我们可以让 fetcher 传递 lang 属性，或者根据源判断
-        
+    for i, item in enumerate(news_list):
         is_english = item.get('lang') == 'en'
         
         if not is_english:
-            prompt = f"请为以下科技新闻生成一个100字以内的中文精简摘要。只需要返回摘要文本，不要有其他描述：\n标题：{item['title']}\n内容：{item['summary']}"
+            prompt = f"请为以下科技新闻生成一个100字以内的中文精简摘要。只需要返回摘要文本内容，不要包含“摘要：”或“标题：”等字样：\n标题：{item['title']}\n内容：{item['summary']}"
         else:
-            prompt = f"请将以下英文科技新闻翻译成中文，并生成一个100字以内的中文精简摘要。只需要返回翻译后的摘要文本，不要有其他描述：\n标题：{item['title']}\n内容：{item['summary']}"
+            prompt = f"请将以下英文科技新闻翻译成中文，并生成一个100字以内的中文精简摘要。只需要返回摘要文本内容，不要包含“摘要：”或“翻译：”等字样：\n标题：{item['title']}\n内容：{item['summary']}"
         
-        try:
-            print(f"Summarizing: {item['title'][:30]}...")
-            # 增加安全设置调用
-            response = model.generate_content(prompt, safety_settings=safety_settings)
-            
-            # 安全检查 response.text 可能会抛出错误（如果被 block）
-            if response.candidates and response.candidates[0].content.parts:
-                item['ai_summary'] = response.text.strip()
-            else:
-                # 尝试获取反馈信息
-                feedback = getattr(response, 'prompt_feedback', 'No feedback available')
-                print(f"Blocked or Empty response for {item['title']}. Feedback: {feedback}")
-                item['ai_summary'] = "摘要生成失败，可能是内容触发了安全策略或 API 额度超限。请点击链接查看原文。"
+        # 增加重试机制
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                print(f"[{i+1}/{len(news_list)}] Summarizing: {item['title'][:30]}...")
+                response = model.generate_content(prompt, safety_settings=safety_settings)
                 
-        except Exception as e:
-            print(f"Gemini API Error for {item['title']}: {e}")
-            item['ai_summary'] = "摘要生成失败，可能是内容触发了安全策略或 API 额度超限。请点击链接查看原文。"
+                if response.candidates and response.candidates[0].content.parts:
+                    item['ai_summary'] = response.text.strip()
+                    break # 成功则跳出重试循环
+                else:
+                    raise Exception("Empty response or blocked")
+                    
+            except Exception as e:
+                print(f"Attempt {attempt + 1} failed for {item['title'][:20]}: {e}")
+                if attempt == max_retries - 1:
+                    item['ai_summary'] = "摘要生成失败，可能是内容触发了安全策略或 API 额度超限。请点击链接查看原文。"
+                else:
+                    time.sleep(2) # 失败后等待 2 秒重试
         
         processed_list.append(item)
+        # 每次请求后稍微停顿，避免触发免费额度的频率限制 (RPM)
+        time.sleep(1)
             
     return processed_list
