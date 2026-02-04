@@ -120,3 +120,98 @@ def process_news(news_list):
         time.sleep(1)
             
     return processed_list
+
+def process_github_repos(github_data):
+    """
+    使用 AI 解析 GitHub 仓库信息：定位、规格(参数量)、功能描述
+    """
+    processed_data = {"top": [], "rising": []}
+    import time
+    import json
+
+    safety_settings = {
+        "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
+        "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
+        "HARM_CATEGORY_SEXUALLY_EXPLICIT": "BLOCK_NONE",
+        "HARM_CATEGORY_DANGEROUS_CONTENT": "BLOCK_NONE",
+    }
+
+    def process_batch(repos, category_name):
+        results = []
+        # 每批处理 5 个，减少 API 调用次数并提高效率
+        batch_size = 5
+        for i in range(0, len(repos), batch_size):
+            batch = repos[i:i+batch_size]
+            repo_infos = []
+            for repo in batch:
+                info = {
+                    "name": repo['full_name'],
+                    "desc": repo['description'] or "No description provided.",
+                    "topics": repo.get('topics', []),
+                    "stars": repo['stargazers_count']
+                }
+                repo_infos.append(info)
+
+            prompt = f"""分析以下 GitHub 项目，并以 JSON 数组格式返回每个项目的结构化信息。
+如果是 Agent/框架，描述其“核心功能”和“支持/推荐使用的模型”。
+如果是基础模型(Model)，描述其“参数量”和“主要用途”。
+语言统一使用简体中文。
+
+项目列表：
+{json.dumps(repo_infos, ensure_ascii=False)}
+
+返回格式要求 (严格 JSON):
+[
+  {{
+    "full_name": "项目全名",
+    "type": "基础模型/智能体框架/应用工具/其他",
+    "specs": "参数量(如7B/70B)或支持模型描述",
+    "description": "一句话中文功能核心摘要",
+    "stars": 数字
+  }},
+  ...
+]
+"""
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    print(f"AI is analyzing {category_name} GitHub batch {i//batch_size + 1}...")
+                    response = model.generate_content(prompt, safety_settings=safety_settings)
+                    
+                    # 尝试解析 JSON
+                    content = response.text.strip()
+                    # 去掉可能存在的 markdown 代码块标记
+                    if content.startswith("```json"):
+                        content = content[7:-3].strip()
+                    elif content.startswith("```"):
+                        content = content[3:-3].strip()
+                    
+                    batch_results = json.loads(content)
+                    for idx, res in enumerate(batch_results):
+                        # 补充链接
+                        if idx < len(batch):
+                            res['link'] = batch[idx]['html_url']
+                        results.append(res)
+                    break
+                except Exception as e:
+                    print(f"Batch analysis error (attempt {attempt+1}): {e}")
+                    if attempt == max_retries - 1:
+                        # 降级处理
+                        for repo in batch:
+                            results.append({
+                                "full_name": repo['full_name'],
+                                "type": "未知",
+                                "specs": "解析失败",
+                                "description": repo['description'] or "无描述",
+                                "stars": repo['stargazers_count'],
+                                "link": repo['html_url']
+                            })
+                    time.sleep(2)
+            
+            time.sleep(2) # 避免频率限制
+        return results
+
+    processed_data["top"] = process_batch(github_data["top"][:50], "Top")
+    processed_data["rising"] = process_batch(github_data["rising"][:50], "Rising")
+    
+    return processed_data
